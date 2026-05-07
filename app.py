@@ -202,11 +202,11 @@ with st.sidebar:
     <div style="height:1px;background:#E8ECF0;margin:8px 0 12px"></div>
     """, unsafe_allow_html=True)
 
-    nav_items=[("🗂️","PC Overview","overview"),("🗺️","Constituency Map","map"),
-               ("🏭","Industrial Units","units"),("📋","Policy Impact","policy")]
-    for icon,label,key in nav_items:
+    nav_items=[("PC Overview","overview"),("Constituency Map","map"),
+               ("Industrial Units","units"),("Policy Impact","policy")]
+    for label,key in nav_items:
         active="active" if key=="overview" else ""
-        st.markdown(f'<div class="nav-item {active}"><span class="nav-icon">{icon}</span>{label}</div>',unsafe_allow_html=True)
+        st.markdown(f'<div class="nav-item {active}">{label}</div>',unsafe_allow_html=True)
 
     st.markdown('<div style="height:1px;background:#E8ECF0;margin:12px 0"></div>',unsafe_allow_html=True)
     st.markdown('<p style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:1px;padding:0 16px;margin-bottom:8px">Filters</p>',unsafe_allow_html=True)
@@ -217,7 +217,7 @@ with st.sidebar:
     sel_industry=st.selectbox("Industry",industries_l,key="si")
     all_parties=['All Parties']+sorted({p['party'] for p in lok_list})
     sel_party=st.selectbox("Winning Party",all_parties,key="sp")
-    match_filter=st.radio("District Type",['All','PC Matched Only','Non-PC Districts'])
+    match_filter=st.radio("District Type",['All','Matched Principal Constituency','Non-Principal Constituency Districts'])
     st.markdown('<div style="height:1px;background:#E8ECF0;margin:12px 0"></div>',unsafe_allow_html=True)
     view_mode=st.radio("Map Colors",['Winning Party','Top Industry','Units Count'])
     st.markdown('<div style="height:1px;background:#E8ECF0;margin:12px 0"></div>',unsafe_allow_html=True)
@@ -233,8 +233,8 @@ filtered=df.copy()
 if sel_state!='All States': filtered=filtered[filtered['state']==sel_state]
 if sel_industry!='All Industries': filtered=filtered[filtered['industries'].apply(lambda x:x.get(sel_industry,0)>0)]
 if sel_party!='All Parties' and 'party' in filtered.columns: filtered=filtered[filtered['party'].fillna('')==sel_party]
-if match_filter=='PC Matched Only': filtered=filtered[filtered['matched_pc']==True]
-elif match_filter=='Non-PC Districts': filtered=filtered[filtered['matched_pc']==False]
+if match_filter=='Matched Principal Constituency': filtered=filtered[filtered['matched_pc']==True]
+elif match_filter=='Non-Principal Constituency Districts': filtered=filtered[filtered['matched_pc']==False]
 
 pc_df2=filtered[filtered['matched_pc']==True] if 'matched_pc' in filtered.columns else pd.DataFrame()
 pc_with=int((pc_df2['total_units']>0).sum()) if len(pc_df2) else 0
@@ -251,14 +251,7 @@ st.markdown(f"""
   </div>
   <div class="page-title">Parliamentary Industrial Intelligence</div>
   <div style="display:flex;align-items:center;gap:14px">
-    <span style="font-size:18px;color:#64748B">🔔</span>
-    <div class="user-pill">
-      <div class="user-avatar">AU</div>
-      <div>
-        <div style="font-size:12px;font-weight:600;color:#1E293B">Admin User</div>
-        <div style="font-size:10px;color:#64748B">Lok Sabha Secretariat</div>
-      </div>
-    </div>
+    <div style="font-size:12px;color:#64748B;font-weight:500">Lok Sabha Secretariat</div>
   </div>
 </div>
 <div style="height:16px"></div>
@@ -279,7 +272,7 @@ def stat_card(col,cls,icon,label,value,sub,sub_cls):
         </div>""",unsafe_allow_html=True)
 
 stat_card(c1,'blue','📊','Avg PC Productivity',f'₹ {avg_u:,}','+ Industrial Units / PC','up')
-stat_card(c2,'green','🏗️','Constituency Growth',f'{pc_with}','PCs with Active Units','up')
+stat_card(c2,'green','🏗️','Constituency Growth',f'{pc_with}','Principal Constituencies with Active Units','up')
 stat_card(c3,'orange','👥','Active Political Rep.',f'{len(filtered):,}','Districts Reporting','warn')
 stat_card(c4,'red','📅','Pending (No Units)',f'{pc_without}',f'ACTION REQUIRED: {pc_without} PCs','danger')
 
@@ -327,8 +320,7 @@ with left_col:
     st.markdown('<div class="panel">', unsafe_allow_html=True)
     st.markdown("""
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-      <div style="font-size:14px;font-weight:700;color:#1E293B">🗺️ National Industrial PC Heatmap</div>
-      <div style="background:#EFF6FF;color:#1D4ED8;font-size:10px;font-weight:700;padding:4px 10px;border-radius:6px;border:1px solid #BFDBFE">REAL-TIME LOK SABHA DATA</div>
+      <div style="font-size:14px;font-weight:700;color:#1E293B">🗺️ National Industrial Heatmap</div>
     </div>""",unsafe_allow_html=True)
 
     clat=filtered['lat'].mean() if len(filtered)>0 else 22.5
@@ -397,26 +389,30 @@ with left_col:
             <span class="zone-btn inactive">EAST</span>
           </div>
         </div>""",unsafe_allow_html=True)
-        # Bar chart from real data
-        if len(filtered)>0:
-            zone_data=filtered.sort_values('total_units',ascending=False).head(8)
-            import html as html_lib
-            bar_html='<div style="display:flex;align-items:flex-end;gap:6px;height:80px;padding-top:4px">'
-            max_v=zone_data['total_units'].max() or 1
-            for _,r2 in zone_data.iterrows():
-                h=max(8,int(r2['total_units']/max_v*76))
-                is_top=r2['total_units']==max_v
-                bar_html+=('<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">'
-                    '<div style="width:100%;height:'+str(h)+'px;background:'+('#1D4ED8' if is_top else '#BFDBFE')+';border-radius:4px 4px 0 0"></div>'
-                    '<div style="font-size:8px;color:#94A3B8;text-align:center;max-width:36px;overflow:hidden;white-space:nowrap">'+html_lib.escape(str(r2['district'])[:5])+'</div>'
-                    '</div>')
-            bar_html+='</div>'
-            st.markdown(bar_html,unsafe_allow_html=True)
-        st.markdown('</div>',unsafe_allow_html=True)
+        if len(filtered) > 0:
+            zone_data = filtered.sort_values('total_units', ascending=False).head(8).copy()
+            max_v = zone_data['total_units'].max()
+            if max_v == 0: max_v = 1
+            bar_html = '<div style="display:flex;align-items:flex-end;gap:6px;height:80px;padding-top:4px">'
+            for _, r2 in zone_data.iterrows():
+                h = max(8, int(r2['total_units'] / max_v * 76))
+                is_top = r2['total_units'] == zone_data['total_units'].max()
+                dname = str(r2['district'])[:5]
+                bar_html += (
+                    '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">'
+                    '<div style="width:100%;height:' + str(h) + 'px;background:' +
+                    ('#1D4ED8' if is_top else '#BFDBFE') +
+                    ';border-radius:4px 4px 0 0"></div>'
+                    '<div style="font-size:8px;color:#94A3B8;text-align:center">' + dname + '</div>'
+                    '</div>'
+                )
+            bar_html += '</div>'
+            st.markdown(bar_html, unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
     with zone_r:
         st.markdown('<div class="panel">',unsafe_allow_html=True)
-        st.markdown('<div style="font-size:13px;font-weight:700;color:#1E293B;margin-bottom:12px">📋 Constituency Activity Logs</div>',unsafe_allow_html=True)
+        st.markdown('<div style="font-size:13px;font-weight:700;color:#1E293B;margin-bottom:12px">📋 Principal Constituency Activity Logs</div>',unsafe_allow_html=True)
         # Real activity from top PC matches
         top_pcs=df[df['matched_pc']==True].sort_values('total_units',ascending=False).head(4)
         log_colors=['#1D4ED8','#F59E0B','#059669','#EF4444']
@@ -438,9 +434,9 @@ with left_col:
         st.markdown('</div>',unsafe_allow_html=True)
 
 with right_col:
-    # Top Industrial PCs table
+    # Top Industrial Principal Constituencies table
     st.markdown('<div class="panel">',unsafe_allow_html=True)
-    st.markdown('<div class="panel-title">🏆 Top Industrial PCs</div>',unsafe_allow_html=True)
+    st.markdown('<div class="panel-title">🏆 Top Industrial Principal Constituencies</div>',unsafe_allow_html=True)
     st.markdown("""
     <div style="display:flex;padding:0 0 8px;border-bottom:1px solid #E8ECF0;margin-bottom:4px">
       <div style="flex:1;font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase">PC / Party</div>
@@ -562,7 +558,7 @@ with right_col:
 
 # ── Bottom Tabs ────────────────────────────────────────────────────────────────
 st.markdown("<div style='height:14px'></div>",unsafe_allow_html=True)
-tab1,tab2,tab3=st.tabs(["📊 Data Table","🗳 PC Analysis","🏭 Industry Summary"])
+tab1,tab2,tab3=st.tabs(["📊 Data Table","🗳 Principal Constituency Analysis","🏭 Industry Summary"])
 
 with tab1:
     dcols=['state','district','lat','lon','total_units','matched_pc']
@@ -574,7 +570,7 @@ with tab1:
     st.dataframe(disp,use_container_width=True,height=320)
 
 with tab2:
-    st.markdown("### 🗳 Parliamentary Constituency Analysis")
+    st.markdown("### 🗳 Principal Constituency Analysis")
     pc_df3=filtered[filtered['matched_pc']==True].copy() if 'matched_pc' in filtered.columns else pd.DataFrame()
     if len(pc_df3)>0 and 'party' in pc_df3.columns:
         ps=(pc_df3.groupby('party').agg(constituencies=('pc_name','count'),total_units=('total_units','sum'),avg_units=('total_units','mean')).reset_index().sort_values('total_units',ascending=False))
@@ -597,7 +593,7 @@ with tab2:
                     '<div style="color:#94A3B8;font-size:10px;margin-top:2px">'+str(int(pr['constituencies']))+' seats · avg '+f"{int(pr['avg_units']):,}"+'/seat</div>'
                     '</div>',unsafe_allow_html=True)
         with pp2:
-            st.markdown("**Top PC Constituencies**")
+            st.markdown("**Top Principal Constituencies**")
             for _,pr in pc_df3.sort_values('total_units',ascending=False).head(15).iterrows():
                 c=get_party_color(pr.get('party',''))
                 st.markdown(
@@ -609,7 +605,7 @@ with tab2:
                     '<div style="color:#1D4ED8;font-weight:700;font-family:JetBrains Mono,monospace;font-size:13px">'+f"{pr['total_units']:,}"+'</div>'
                     '</div>',unsafe_allow_html=True)
     else:
-        st.info("No PC-matched districts in current filter.")
+        st.info("No Principal Constituency-matched districts in current filter.")
 
 with tab3:
     st.markdown("### 🏭 Industry Sector Summary")
