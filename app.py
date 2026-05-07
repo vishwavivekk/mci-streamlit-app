@@ -8,7 +8,7 @@ from datetime import datetime
 
 st.set_page_config(page_title="Janmat Industrial Constituency Portal", page_icon="🏛️", layout="wide", initial_sidebar_state="expanded")
 
-# ── CSS ──────────────────────────────────────────────────────────────[...]
+# ── CSS ──────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
@@ -152,7 +152,7 @@ def get_dist_km(lat1,lon1,lat2,lon2):
     a=math.sin(dL/2)**2+math.cos(math.radians(lat1))*math.cos(math.radians(lat2))*math.sin(dO/2)**2
     return R*2*math.atan2(math.sqrt(a),math.sqrt(1-a))
 
-# ── Data ──────────────────────────────────────────────────────────────[...]
+# ── Data ──────────────────────────────────────────────────────────────
 @st.cache_data
 def load_data():
     csv_path=os.path.join(BASE_DIR,'Annexure_with_3digit_Sheet1_.csv')
@@ -223,10 +223,27 @@ if match_filter=='Matched Principal Constituency': filtered=filtered[filtered['m
 elif match_filter=='Non-Principal Constituency Districts': filtered=filtered[filtered['matched_pc']==False]
 
 pc_df2=filtered[filtered['matched_pc']==True] if 'matched_pc' in filtered.columns else pd.DataFrame()
-pc_with=int((pc_df2['total_units']>0).sum()) if len(pc_df2) else 0
-avg_u=int(filtered['total_units'].mean()) if len(filtered) else 0
 
-# ── Top nav bar ──────────────────────────────────────────────────────────
+# ── Derived KPIs ──────────────────────────────────────────────────────────
+mapped_pc_count = int(filtered['matched_pc'].sum()) if 'matched_pc' in filtered.columns else 0
+
+units_in_mapped = int(
+    filtered[filtered['matched_pc'] == True]['total_units'].sum()
+) if 'matched_pc' in filtered.columns else 0
+
+competitive_seats = int(
+    filtered[
+        (filtered['matched_pc'] == True) &
+        (filtered['margin'].fillna(999999) < 50000)
+    ].shape[0]
+) if 'matched_pc' in filtered.columns and 'margin' in filtered.columns else 0
+
+state_units = filtered.groupby('state')['total_units'].sum()
+top_state     = state_units.idxmax() if len(state_units) > 0 else "—"
+top_state_val = int(state_units.max()) if len(state_units) > 0 else 0
+top_state_short = (top_state[:12] + "…") if len(top_state) > 12 else top_state
+
+# ── Top nav bar ───────────────────────────────────────────────────────────
 st.markdown(f"""
 <div class="top-bar">
   <div class="page-title">Parliamentary Industrial Intelligence</div>
@@ -237,9 +254,10 @@ st.markdown(f"""
 <div style="height:16px"></div>
 """,unsafe_allow_html=True)
 
-# ── Stat cards ──────────────────────────────────────────────────────────
-c1,c2,c3=st.columns(3)
-def stat_card(col,cls,icon,label,value,sub,sub_cls):
+# ── Stat cards ────────────────────────────────────────────────────────────
+c1, c2, c3, c4 = st.columns(4)
+
+def stat_card(col, cls, icon, label, value, sub, sub_cls):
     with col:
         st.markdown(f"""
         <div class="stat-card {cls}">
@@ -249,15 +267,16 @@ def stat_card(col,cls,icon,label,value,sub,sub_cls):
             <div class="stat-sub {sub_cls}">{sub}</div>
           </div>
           <div class="stat-icon">{icon}</div>
-        </div>""",unsafe_allow_html=True)
+        </div>""", unsafe_allow_html=True)
 
-stat_card(c1,'blue','📊','Avg PC Productivity',f'₹ {avg_u:,}','+ Industrial Units / PC','up')
-stat_card(c2,'green','🏗️','Constituency Growth',f'{pc_with}','Principal Constituencies with Active Units','up')
-stat_card(c3,'orange','👥','Active Political Rep.',f'{len(filtered):,}','Districts Reporting','warn')
+stat_card(c1, 'blue',   '🗺️', 'Mapped Principal Constituencies', f'{mapped_pc_count:,}',   'Districts matched to a Lok Sabha PC', 'up')
+stat_card(c2, 'green',  '🏗️', 'Units in Mapped PCs',             f'{units_in_mapped:,}',   'Industrial units inside PC districts', 'up')
+stat_card(c3, 'orange', '⚔️', 'Competitive Seats',               f'{competitive_seats:,}', 'PCs with margin < 50,000 votes', 'warn')
+stat_card(c4, 'red',    '🏆', 'Top Industrial State',            top_state_short,           f'{top_state_val:,} total units', 'up')
 
 st.markdown("<div style='height:16px'></div>",unsafe_allow_html=True)
 
-# ── Map helpers ──────────────────────────────────────────────────────────
+# ── Map helpers ───────────────────────────────────────────────────────────
 def get_color(row):
     if view_mode=='Top Industry':
         return ind_color_map.get(max(row['industries'],key=row['industries'].get),'#6366F1') if row['industries'] else '#6366F1'
@@ -291,11 +310,10 @@ def build_legend():
         rows+='<div class="legend-row"><div class="legend-dot" style="background:#6366F1"></div>No PC data</div>'
     return f'<div class="map-legend"><div class="legend-title">{view_mode}</div>{rows}<div style="margin-top:8px;padding-top:8px;border-top:1px solid #E8ECF0;font-size:10px;color:#94A3B8">● Bubble size represents industrial unit count</div></div>'
 
-# ── Main layout ──────────────────────────────────────────────────────────
+# ── Main layout ───────────────────────────────────────────────────────────
 left_col, right_col = st.columns([2, 1])
 
 with left_col:
-    # Map panel
     st.markdown('<div class="panel">', unsafe_allow_html=True)
     st.markdown("""
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
@@ -311,7 +329,6 @@ with left_col:
     for _,row in filtered.iterrows():
         color=get_color(row); r=get_radius(row['total_units']); is_pc=row.get('matched_pc',False)
         top_inds=sorted(row['industries'].items(),key=lambda x:-x[1])[:5] if row['industries'] else []
-        # Build popup as plain HTML (no f-string nesting that causes rendering issues)
         ind_rows=""
         for k,v in top_inds:
             ind_rows+='<tr><td style="color:#374151;font-size:11px;padding:2px 5px">'+k[:30]+'</td><td style="font-weight:600;color:#1D4ED8;font-size:11px;padding:2px 5px;text-align:right">'+str(v)+'</td></tr>'
@@ -354,7 +371,6 @@ with left_col:
     st.markdown(build_legend(),unsafe_allow_html=True)
 
 with right_col:
-    # Top Industrial Principal Constituencies table
     st.markdown('<div class="panel">',unsafe_allow_html=True)
     st.markdown('<div class="panel-title">🏆 Top Industrial Principal Constituencies</div>',unsafe_allow_html=True)
     st.markdown("""
@@ -381,7 +397,6 @@ with right_col:
         )
     st.markdown('</div>',unsafe_allow_html=True)
 
-    # Selected district detail (click from map)
     st.markdown("<div style='height:12px'></div>",unsafe_allow_html=True)
     sorted_filtered=filtered.sort_values('total_units',ascending=False)
 
@@ -440,7 +455,6 @@ with right_col:
         st.markdown('</div>',unsafe_allow_html=True)
         st.markdown("<div style='height:10px'></div>",unsafe_allow_html=True)
 
-    # District list
     st.markdown('<div class="panel">',unsafe_allow_html=True)
     st.markdown('<div class="panel-title">📋 Top Districts by Units</div>',unsafe_allow_html=True)
     for _,row in sorted_filtered.head(15).iterrows():
@@ -470,7 +484,7 @@ with right_col:
         )
     st.markdown('</div>',unsafe_allow_html=True)
 
-# ── Bottom Tabs ──────────────────────────────────────────────────────────
+# ── Bottom Tabs ───────────────────────────────────────────────────────────
 st.markdown("<div style='height:14px'></div>",unsafe_allow_html=True)
 tab1,tab2,tab3=st.tabs(["📊 Data Table","🗳 Principal Constituency Analysis","🏭 Industry Summary"])
 
