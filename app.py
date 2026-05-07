@@ -224,17 +224,11 @@ elif match_filter=='Non-Principal Constituency Districts': filtered=filtered[fil
 
 pc_df2=filtered[filtered['matched_pc']==True] if 'matched_pc' in filtered.columns else pd.DataFrame()
 pc_with=int((pc_df2['total_units']>0).sum()) if len(pc_df2) else 0
-pc_without=int((pc_df2['total_units']==0).sum()) if len(pc_df2) else 0
 avg_u=int(filtered['total_units'].mean()) if len(filtered) else 0
-tot_u=int(filtered['total_units'].sum())
 
 # ── Top nav bar ──────────────────────────────────────────────────────────
 st.markdown(f"""
 <div class="top-bar">
-  <div class="search-box">
-    <span style="color:#94A3B8;font-size:14px">🔍</span>
-    <span style="font-size:13px;color:#94A3B8">Search PCs (e.g. Varanasi, Wayanad)...</span>
-  </div>
   <div class="page-title">Parliamentary Industrial Intelligence</div>
   <div style="display:flex;align-items:center;gap:14px">
     <div style="font-size:12px;color:#64748B;font-weight:500">Lok Sabha Secretariat</div>
@@ -244,7 +238,7 @@ st.markdown(f"""
 """,unsafe_allow_html=True)
 
 # ── Stat cards ──────────────────────────────────────────────────────────
-c1,c2,c3,c4=st.columns(4)
+c1,c2,c3=st.columns(3)
 def stat_card(col,cls,icon,label,value,sub,sub_cls):
     with col:
         st.markdown(f"""
@@ -260,7 +254,6 @@ def stat_card(col,cls,icon,label,value,sub,sub_cls):
 stat_card(c1,'blue','📊','Avg PC Productivity',f'₹ {avg_u:,}','+ Industrial Units / PC','up')
 stat_card(c2,'green','🏗️','Constituency Growth',f'{pc_with}','Principal Constituencies with Active Units','up')
 stat_card(c3,'orange','👥','Active Political Rep.',f'{len(filtered):,}','Districts Reporting','warn')
-stat_card(c4,'red','📅','Pending (No Units)',f'{pc_without}',f'ACTION REQUIRED: {pc_without} PCs','danger')
 
 st.markdown("<div style='height:16px'></div>",unsafe_allow_html=True)
 
@@ -360,65 +353,6 @@ with left_col:
     st.markdown('</div>',unsafe_allow_html=True)
     st.markdown(build_legend(),unsafe_allow_html=True)
 
-    # Activity / Output section below map
-    st.markdown("<div style='height:14px'></div>",unsafe_allow_html=True)
-
-    zone_l, zone_r = st.columns(2)
-    with zone_l:
-        st.markdown('<div class="panel">',unsafe_allow_html=True)
-        st.markdown("""
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-          <div style="font-size:13px;font-weight:700;color:#1E293B">📈 Industrial Output Trend by Zone</div>
-          <div style="display:flex;gap:4px">
-            <span class="zone-btn inactive">NORTH</span>
-            <span class="zone-btn active">SOUTH</span>
-            <span class="zone-btn inactive">EAST</span>
-          </div>
-        </div>""",unsafe_allow_html=True)
-        if len(filtered) > 0:
-            zone_data = filtered.sort_values('total_units', ascending=False).head(8).copy()
-            max_v = zone_data['total_units'].max()
-            if max_v == 0: max_v = 1
-            bar_html = '<div style="display:flex;align-items:flex-end;gap:6px;height:80px;padding-top:4px">'
-            for _, r2 in zone_data.iterrows():
-                h = max(8, int(r2['total_units'] / max_v * 76))
-                is_top = r2['total_units'] == zone_data['total_units'].max()
-                dname = str(r2['district'])[:5]
-                bar_html += (
-                    '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">'
-                    '<div style="width:100%;height:' + str(h) + 'px;background:' +
-                    ('#1D4ED8' if is_top else '#BFDBFE') +
-                    ';border-radius:4px 4px 0 0"></div>'
-                    '<div style="font-size:8px;color:#94A3B8;text-align:center">' + dname + '</div>'
-                    '</div>'
-                )
-            bar_html += '</div>'
-            st.markdown(bar_html, unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    with zone_r:
-        st.markdown('<div class="panel">',unsafe_allow_html=True)
-        st.markdown('<div style="font-size:13px;font-weight:700;color:#1E293B;margin-bottom:12px">📋 Principal Constituency Activity Logs</div>',unsafe_allow_html=True)
-        # Real activity from top PC matches
-        top_pcs=df[df['matched_pc']==True].sort_values('total_units',ascending=False).head(4)
-        log_colors=['#1D4ED8','#F59E0B','#059669','#EF4444']
-        log_types=['APPROVAL','NOTICE','REPORT','ALERT']
-        log_msgs=['New industrial units sanctioned in PC:','Land acquisition query raised for PC:',
-                  'Quarterly compliance data updated for:','Industrial review pending for PC:']
-        now=datetime.now()
-        for i,((_,pc_r),lc,lt,lm) in enumerate(zip(top_pcs.iterrows(),log_colors,log_types,log_msgs)):
-            t=f"{(now.hour-i)%12 or 12}:{['45','12','58','30'][i]} {'AM' if i<2 else 'PM'}"
-            pn=str(pc_r.get('pc_name','Unknown'))
-            st.markdown(
-                '<div class="log-item">'
-                '<div class="log-time">'+t+'</div>'
-                '<div class="log-bar" style="background:'+lc+'"></div>'
-                '<div class="log-content"><b>'+lt+'</b> '+lm+' <b style="color:'+lc+'">'+pn+'</b></div>'
-                '</div>',
-                unsafe_allow_html=True
-            )
-        st.markdown('</div>',unsafe_allow_html=True)
-
 with right_col:
     # Top Industrial Principal Constituencies table
     st.markdown('<div class="panel">',unsafe_allow_html=True)
@@ -427,17 +361,12 @@ with right_col:
     <div style="display:flex;padding:0 0 8px;border-bottom:1px solid #E8ECF0;margin-bottom:4px">
       <div style="flex:1;font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase">PC / Party</div>
       <div style="width:55px;text-align:right;font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase">Units</div>
-      <div style="width:70px;text-align:right;font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase">Status</div>
     </div>""",unsafe_allow_html=True)
 
     top_pcs_tbl=pc_df2.sort_values('total_units',ascending=False).head(8) if len(pc_df2) else pd.DataFrame()
-    status_map=[(2000,'excellent','EXCELLENT'),(1000,'optimal','OPTIMAL'),(400,'expanding','EXPANDING'),(0,'stable','STABLE')]
     for _,r2 in top_pcs_tbl.iterrows():
         pc_col=get_party_color(r2.get('party',''))
         u=r2['total_units']
-        sclass,slabel='stable','STABLE'
-        for thresh,sc,sl in status_map:
-            if u>thresh: sclass,slabel=sc,sl; break
         abbr=get_party_abbr(r2.get('party',''))
         state_short=str(r2.get('state','')).replace('Uttar Pradesh','UP').replace('Maharashtra','MH').replace('West Bengal','WB').replace('Tamil Nadu','TN').replace('Karnataka','KA').replace('Andhra Pradesh','AP').replace('Bihar','BR')
         st.markdown(
@@ -447,7 +376,6 @@ with right_col:
             '<div style="font-size:10px;font-weight:600;color:'+pc_col+'">'+abbr+' · '+state_short+'</div>'
             '</div>'
             '<div style="width:55px;text-align:right;font-size:13px;font-weight:700;font-family:JetBrains Mono,monospace;color:#1E293B">'+f"{u:,}"+'</div>'
-            '<div style="width:70px;text-align:right"><span class="status-pill '+sclass+'">'+slabel+'</span></div>'
             '</div>',
             unsafe_allow_html=True
         )
