@@ -8,7 +8,7 @@ from datetime import datetime
 
 st.set_page_config(page_title="Janmat Industrial Constituency Portal", page_icon="🏛️", layout="wide", initial_sidebar_state="expanded")
 
-# ── CSS ──────────────────────────────────────────────────────────────────────
+# ── CSS ──────────────────────────────────────────────────────────────[...]
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
@@ -39,7 +39,7 @@ section[data-testid="stSidebar"] [data-testid="stRadio"] p{color:#1E293B!importa
 .nav-icon{font-size:16px;width:20px;text-align:center;}
 
 /* ── TOP NAV BAR ── */
-.top-bar{background:#FFFFFF;border-bottom:1px solid #E8ECF0;padding:10px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 1px 4px rgba(0,0,0,0.06);}
+.top-bar{background:#FFFFFF;border-bottom:1px solid #E8ECF0;padding:10px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 1px 4px rgba(0,0,0,0.05);}
 .search-box{display:flex;align-items:center;gap:8px;background:#F4F6F9;border:1px solid #E2E8F0;border-radius:20px;padding:7px 16px;min-width:320px;}
 .search-box input{border:none;background:transparent;outline:none;font-size:13px;color:#64748B;width:100%;}
 .page-title{font-size:17px;font-weight:700;color:#1E293B;letter-spacing:-.3px;}
@@ -107,7 +107,7 @@ h1,h2,h3,h4,h5,h6,p,span,label{color:#1E293B;}
 </style>
 """, unsafe_allow_html=True)
 
-# ── Constants ──────────────────────────────────────────────────────────────────
+# ── Constants ────────────────────────────────────────────────────────────
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 PARTY_COLORS = {
@@ -152,7 +152,7 @@ def get_dist_km(lat1,lon1,lat2,lon2):
     a=math.sin(dL/2)**2+math.cos(math.radians(lat1))*math.cos(math.radians(lat2))*math.sin(dO/2)**2
     return R*2*math.atan2(math.sqrt(a),math.sqrt(1-a))
 
-# ── Data ──────────────────────────────────────────────────────────────────────
+# ── Data ──────────────────────────────────────────────────────────────[...]
 @st.cache_data
 def load_data():
     csv_path=os.path.join(BASE_DIR,'Annexure_with_3digit_Sheet1_.csv')
@@ -192,7 +192,7 @@ def load_data():
 
 df,lok_list,all_industries,ind_color_map=load_data()
 
-# ── Sidebar ───────────────────────────────────────────────────────────────────
+# ── Sidebar ───────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown("""
     <div style="padding:16px 16px 8px">
@@ -202,13 +202,6 @@ with st.sidebar:
     <div style="height:1px;background:#E8ECF0;margin:8px 0 12px"></div>
     """, unsafe_allow_html=True)
 
-    nav_items=[("PC Overview","overview"),("Constituency Map","map"),
-               ("Industrial Units","units"),("Policy Impact","policy")]
-    for label,key in nav_items:
-        active="active" if key=="overview" else ""
-        st.markdown(f'<div class="nav-item {active}">{label}</div>',unsafe_allow_html=True)
-
-    st.markdown('<div style="height:1px;background:#E8ECF0;margin:12px 0"></div>',unsafe_allow_html=True)
     st.markdown('<p style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:1px;padding:0 16px;margin-bottom:8px">Filters</p>',unsafe_allow_html=True)
 
     states=['All States']+sorted(df['state'].unique().tolist())
@@ -220,15 +213,8 @@ with st.sidebar:
     match_filter=st.radio("District Type",['All','Matched Principal Constituency','Non-Principal Constituency Districts'])
     st.markdown('<div style="height:1px;background:#E8ECF0;margin:12px 0"></div>',unsafe_allow_html=True)
     view_mode=st.radio("Map Colors",['Winning Party','Top Industry','Units Count'])
-    st.markdown('<div style="height:1px;background:#E8ECF0;margin:12px 0"></div>',unsafe_allow_html=True)
-    st.markdown("""
-    <div style="padding:0 16px 16px">
-      <div style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Navigation</div>
-      <div class="nav-item" style="padding:8px 10px"><span>⚙️</span> Settings</div>
-      <div class="nav-item" style="padding:8px 10px"><span>❓</span> Support</div>
-    </div>""",unsafe_allow_html=True)
 
-# ── Filters ───────────────────────────────────────────────────────────────────
+# ── Filters ───────────────────────────────────────────────────────────────
 filtered=df.copy()
 if sel_state!='All States': filtered=filtered[filtered['state']==sel_state]
 if sel_industry!='All Industries': filtered=filtered[filtered['industries'].apply(lambda x:x.get(sel_industry,0)>0)]
@@ -242,7 +228,7 @@ pc_without=int((pc_df2['total_units']==0).sum()) if len(pc_df2) else 0
 avg_u=int(filtered['total_units'].mean()) if len(filtered) else 0
 tot_u=int(filtered['total_units'].sum())
 
-# ── Top nav bar ───────────────────────────────────────────────────────────────
+# ── Top nav bar ──────────────────────────────────────────────────────────
 st.markdown(f"""
 <div class="top-bar">
   <div class="search-box">
@@ -257,7 +243,7 @@ st.markdown(f"""
 <div style="height:16px"></div>
 """,unsafe_allow_html=True)
 
-# ── Stat cards ────────────────────────────────────────────────────────────────
+# ── Stat cards ──────────────────────────────────────────────────────────
 c1,c2,c3,c4=st.columns(4)
 def stat_card(col,cls,icon,label,value,sub,sub_cls):
     with col:
@@ -278,7 +264,7 @@ stat_card(c4,'red','📅','Pending (No Units)',f'{pc_without}',f'ACTION REQUIRED
 
 st.markdown("<div style='height:16px'></div>",unsafe_allow_html=True)
 
-# ── Map helpers ───────────────────────────────────────────────────────────────
+# ── Map helpers ──────────────────────────────────────────────────────────
 def get_color(row):
     if view_mode=='Top Industry':
         return ind_color_map.get(max(row['industries'],key=row['industries'].get),'#6366F1') if row['industries'] else '#6366F1'
@@ -310,9 +296,9 @@ def build_legend():
                 c=get_party_color(p)
                 rows+=f'<div class="legend-row"><div class="legend-dot" style="background:{c}"></div><b style="color:{c}">{get_party_abbr(p)}</b> — {p[:22]}</div>'
         rows+='<div class="legend-row"><div class="legend-dot" style="background:#6366F1"></div>No PC data</div>'
-    return f'<div class="map-legend"><div class="legend-title">{view_mode}</div>{rows}<div style="margin-top:8px;padding-top:8px;border-top:1px solid #E8ECF0;font-size:10px;color:#94A3B8">● Bubble size = unit count</div></div>'
+    return f'<div class="map-legend"><div class="legend-title">{view_mode}</div>{rows}<div style="margin-top:8px;padding-top:8px;border-top:1px solid #E8ECF0;font-size:10px;color:#94A3B8">● Bubble size represents industrial unit count</div></div>'
 
-# ── Main layout ───────────────────────────────────────────────────────────────
+# ── Main layout ──────────────────────────────────────────────────────────
 left_col, right_col = st.columns([2, 1])
 
 with left_col:
@@ -453,7 +439,7 @@ with right_col:
         for thresh,sc,sl in status_map:
             if u>thresh: sclass,slabel=sc,sl; break
         abbr=get_party_abbr(r2.get('party',''))
-        state_short=str(r2.get('state','')).replace('Uttar Pradesh','UP').replace('Maharashtra','MH').replace('West Bengal','WB').replace('Tamil Nadu','TN').replace('Karnataka','KA').replace('Andhra Pradesh','AP').replace('Rajasthan','RJ').replace('Gujarat','GJ').replace('Madhya Pradesh','MP').replace('Bihar','BR')[:2].upper()
+        state_short=str(r2.get('state','')).replace('Uttar Pradesh','UP').replace('Maharashtra','MH').replace('West Bengal','WB').replace('Tamil Nadu','TN').replace('Karnataka','KA').replace('Andhra Pradesh','AP').replace('Bihar','BR')
         st.markdown(
             '<div class="tbl-row">'
             '<div style="flex:1;min-width:0">'
@@ -540,7 +526,7 @@ with right_col:
             pc_c=get_party_color(row.get('party',''))
             party_html='<span style="font-size:9px;font-weight:700;color:'+pc_c+';background:'+pc_c+'22;padding:1px 6px;border-radius:10px">'+get_party_abbr(row.get('party',''))+'</span>'
         st.markdown(
-            '<div style="background:'+bg+';border-left:'+border+';border-top:1px solid #E8ECF0;border-right:1px solid #E8ECF0;border-bottom:1px solid #E8ECF0;border-radius:8px;padding:8px 10px;margin-bottom:5px">'
+            '<div style="background:'+bg+';border-left:'+border+';border-top:1px solid #E8ECF0;border-right:1px solid #E8ECF0;border-bottom:1px solid #E8ECF0;border-radius:8px;padding:8px 10px;margin-bottom:6px">'
             '<div style="display:flex;justify-content:space-between;align-items:flex-start">'
             '<div style="flex:1;min-width:0">'
             '<div style="font-weight:600;font-size:12px;color:#1E293B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+str(row['district'])+'</div>'
@@ -556,7 +542,7 @@ with right_col:
         )
     st.markdown('</div>',unsafe_allow_html=True)
 
-# ── Bottom Tabs ────────────────────────────────────────────────────────────────
+# ── Bottom Tabs ──────────────────────────────────────────────────────────
 st.markdown("<div style='height:14px'></div>",unsafe_allow_html=True)
 tab1,tab2,tab3=st.tabs(["📊 Data Table","🗳 Principal Constituency Analysis","🏭 Industry Summary"])
 
