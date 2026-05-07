@@ -94,26 +94,33 @@ section[data-testid="stSidebar"] [data-testid="stRadio"] p {
     background: #FFFFFF;
     border: 1px solid #E2E8F0;
     border-radius: 12px;
-    padding: 18px 20px;
+    padding: 16px 12px;
     text-align: center;
     box-shadow: 0 1px 6px rgba(0,0,0,0.06);
     transition: box-shadow 0.2s;
+    height: 90px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
 }
 .metric-card:hover { box-shadow: 0 4px 14px rgba(37,99,235,0.12); }
 .metric-val {
-    font-size: 30px;
+    font-size: 22px;
     font-weight: 700;
     color: #2563EB;
     font-family: 'JetBrains Mono', monospace;
-    line-height: 1.1;
+    line-height: 1.2;
+    white-space: nowrap;
 }
 .metric-lbl {
-    font-size: 10.5px;
+    font-size: 9.5px;
     color: #64748B;
     text-transform: uppercase;
-    letter-spacing: 0.8px;
+    letter-spacing: 0.6px;
     margin-top: 4px;
-    font-weight: 500;
+    font-weight: 600;
+    line-height: 1.3;
 }
 
 /* ── Section titles ── */
@@ -425,18 +432,18 @@ st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
 def get_color(row):
     if view_mode == 'Top Industry':
         if row['industries']:
-            return ind_color_map.get(max(row['industries'], key=row['industries'].get), '#94A3B8')
-        return '#94A3B8'
+            return ind_color_map.get(max(row['industries'], key=row['industries'].get), '#6366F1')
+        return '#6366F1'
     elif view_mode == 'Winning Party':
         if row.get('matched_pc') and pd.notna(row.get('party','')):
             return get_party_color(row['party'])
-        return '#CBD5E1'
+        return '#6366F1'   # vibrant indigo instead of grey for unmatched
     else:
         u = row['total_units']
-        if u > 500: return '#DC2626'
-        if u > 100: return '#D97706'
-        if u > 20:  return '#059669'
-        return '#2563EB'
+        if u > 500: return '#EF4444'   # vivid red
+        if u > 100: return '#F59E0B'   # vivid amber
+        if u > 20:  return '#10B981'   # vivid emerald
+        return '#3B82F6'               # vivid blue
 
 def get_radius(units):
     return max(5, min(30, math.sqrt(units + 1) * 1.15))
