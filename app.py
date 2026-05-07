@@ -69,7 +69,7 @@ h1, h2, h3, h4, h5, h6, label, .stMarkdown p { color: #1F2937 !important; }
 </style>
 """, unsafe_allow_html=True)
 
-# ─── Data Loading ────────────────────────────────────────────────────────────
+# ─── Data Loading ──────────────────────────────────────────────────────────
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 PARTY_COLORS = {
@@ -191,10 +191,10 @@ def load_data():
 
     return df, lok_list, all_industries, ind_color_map
 
-# ─── Load ────────────────────────────────────────────────────────────────────
+# ─── Load ───────────────────────────────────────────────────────────────
 df, lok_list, all_industries, ind_color_map = load_data()
 
-# ─── Sidebar Filters ─────────────────────────────────────────────────────────
+# ─── Sidebar Filters ────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown("### 🏭 Manufacturing Cluster Intelligence")
     st.markdown("*Lok Sabha 2024 × Industrial Units*")
@@ -220,7 +220,7 @@ with st.sidebar:
     st.divider()
     st.caption(f"📊 {len(df)} districts · {df['total_units'].sum():,} total units")
 
-# ─── Apply Filters ───────────────────────────────────────────────────────────
+# ─── Apply Filters ──────────────────────────────────────────────────────────
 filtered = df.copy()
 
 if sel_state != 'All States':
@@ -247,7 +247,7 @@ if 'matched_pc' in filtered.columns:
     pc_with_units    = int((pc_matched_df['total_units'] > 0).sum())
     pc_without_units = int((pc_matched_df['total_units'] == 0).sum())
 
-# ─── Header Metrics ──────────────────────────────────────────────────────────
+# ─── Header Metrics ────────────────────────────────────────────────────────
 c1, c2, c3, c4 = st.columns(4)
 with c1:
     st.markdown(
@@ -276,171 +276,122 @@ with c4:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# ─── Main Layout: Map + Detail ───────────────────────────────────────────────
-map_col, detail_col = st.columns([3, 1])
+# ─── Main Layout: Full-width Map ───────────────────────────────────────────────
+center_lat = filtered['lat'].mean() if len(filtered) > 0 else 22.5
+center_lon = filtered['lon'].mean() if len(filtered) > 0 else 80.0
 
-with map_col:
-    center_lat = filtered['lat'].mean() if len(filtered) > 0 else 22.5
-    center_lon = filtered['lon'].mean() if len(filtered) > 0 else 80.0
+m = folium.Map(
+    location=[center_lat, center_lon],
+    zoom_start=5 if sel_state == 'All States' else 7,
+    tiles=None,
+    prefer_canvas=True,
+)
 
-    m = folium.Map(
-        location=[center_lat, center_lon],
-        zoom_start=5 if sel_state == 'All States' else 7,
-        tiles=None,
-        prefer_canvas=True,
+# Light tile layer
+folium.TileLayer(
+    tiles='https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+    attr='© OpenStreetMap © CartoDB',
+    name='Light',
+    max_zoom=18,
+).add_to(m)
+
+def get_color(row):
+    if view_mode == 'Top Industry':
+        if row['industries']:
+            top_ind = max(row['industries'], key=row['industries'].get)
+            return ind_color_map.get(top_ind, '#6B7280')
+        return '#6B7280'
+    elif view_mode == 'Winning Party':
+        if row.get('matched_pc') and 'party' in row.index and pd.notna(row.get('party', '')):
+            return get_party_color(row['party'])
+        return '#9CA3AF'
+    else:  # Units Count
+        u = row['total_units']
+        if u > 500: return '#DC2626'
+        if u > 100: return '#D97706'
+        if u > 20:  return '#059669'
+        return '#2563EB'
+
+def get_radius(units):
+    """Bubble size represents industrial unit count."""
+    return max(5, min(28, math.sqrt(units + 1) * 1.1))
+
+for _, row in filtered.iterrows():
+    color  = get_color(row)
+    r      = get_radius(row['total_units'])
+    is_pc  = row.get('matched_pc', False)
+
+    top_inds = sorted(row['industries'].items(), key=lambda x: -x[1])[:5] if row['industries'] else []
+    ind_html = ''.join(
+        f'<tr>'
+        f'<td style="color:#374151;font-size:11px;padding:1px 4px">{k[:35]}</td>'
+        f'<td style="font-weight:600;color:#2563EB;font-size:11px;padding:1px 4px">{v}</td>'
+        f'</tr>'
+        for k, v in top_inds
     )
 
-    # Light tile layer
-    folium.TileLayer(
-        tiles='https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-        attr='© OpenStreetMap © CartoDB',
-        name='Light',
-        max_zoom=18,
-    ).add_to(m)
-
-    def get_color(row):
-        if view_mode == 'Top Industry':
-            if row['industries']:
-                top_ind = max(row['industries'], key=row['industries'].get)
-                return ind_color_map.get(top_ind, '#6B7280')
-            return '#6B7280'
-        elif view_mode == 'Winning Party':
-            if row.get('matched_pc') and 'party' in row.index and pd.notna(row.get('party', '')):
-                return get_party_color(row['party'])
-            return '#9CA3AF'
-        else:  # Units Count
-            u = row['total_units']
-            if u > 500: return '#DC2626'
-            if u > 100: return '#D97706'
-            if u > 20:  return '#059669'
-            return '#2563EB'
-
-    def get_radius(units):
-        """Bubble size represents industrial unit count."""
-        return max(5, min(28, math.sqrt(units + 1) * 1.1))
-
-    for _, row in filtered.iterrows():
-        color  = get_color(row)
-        r      = get_radius(row['total_units'])
-        is_pc  = row.get('matched_pc', False)
-
-        top_inds = sorted(row['industries'].items(), key=lambda x: -x[1])[:5] if row['industries'] else []
-        ind_html = ''.join(
-            f'<tr>'
-            f'<td style="color:#374151;font-size:11px;padding:1px 4px">{k[:35]}</td>'
-            f'<td style="font-weight:600;color:#2563EB;font-size:11px;padding:1px 4px">{v}</td>'
-            f'</tr>'
-            for k, v in top_inds
-        )
-
-        pc_html = ''
-        if is_pc:
-            pc_color = get_party_color(row.get('party', ''))
-            pc_html = f'''
-            <div style="margin-top:8px;padding-top:8px;border-top:1px solid #DCE3EA">
-              <div style="font-size:10px;color:#6B7280;margin-bottom:4px">PARLIAMENTARY CONSTITUENCY</div>
-              <div style="font-weight:700;color:#059669;font-size:12px">{row.get('pc_name','')}</div>
-              <div style="font-size:11px;color:#1F2937;margin-top:3px">🏆 {row.get('winner','')}</div>
-              <div style="font-size:11px;color:{pc_color};font-weight:600">{row.get('party','')}</div>
-              <div style="font-size:11px;color:#6B7280">Margin: {row.get('margin',0):,} votes</div>
-            </div>'''
-
-        popup_html = f'''
-        <div style="font-family:'Space Grotesk',sans-serif;min-width:220px;background:#FFFFFF;color:#1F2937;border-radius:8px;padding:4px;">
-          <div style="font-size:14px;font-weight:700;margin-bottom:2px;color:#1F2937">{row['district']}</div>
-          <div style="font-size:11px;color:#6B7280;margin-bottom:8px">{row['state']}</div>
-          <div style="font-size:20px;font-weight:700;color:#2563EB;margin-bottom:4px">{row['total_units']:,}</div>
-          <div style="font-size:10px;color:#6B7280;margin-bottom:8px">INDUSTRIAL UNITS</div>
-          <table style="width:100%">{ind_html}</table>
-          {pc_html}
+    pc_html = ''
+    if is_pc:
+        pc_color = get_party_color(row.get('party', ''))
+        pc_html = f'''
+        <div style="margin-top:8px;padding-top:8px;border-top:1px solid #DCE3EA">
+          <div style="font-size:10px;color:#6B7280;margin-bottom:4px">PARLIAMENTARY CONSTITUENCY</div>
+          <div style="font-weight:700;color:#059669;font-size:12px">{row.get('pc_name','')}</div>
+          <div style="font-size:11px;color:#1F2937;margin-top:3px">🏆 {row.get('winner','')}</div>
+          <div style="font-size:11px;color:{pc_color};font-weight:600">{row.get('party','')}</div>
+          <div style="font-size:11px;color:#6B7280">Margin: {row.get('margin',0):,} votes</div>
         </div>'''
 
-        folium.CircleMarker(
-            location=[row['lat'], row['lon']],
-            radius=r,
-            color='#1F2937' if is_pc else color,
-            weight=2 if is_pc else 0.8,
-            fill=True,
-            fill_color=color,
-            fill_opacity=0.75,
-            popup=folium.Popup(popup_html, max_width=280),
-            tooltip=f"{row['district']} | {row['total_units']:,} units" + (
-                f" | PC: {row.get('pc_name','')}" if is_pc else ''
-            ),
-        ).add_to(m)
+    popup_html = f'''
+    <div style="font-family:'Space Grotesk',sans-serif;min-width:220px;background:#FFFFFF;color:#1F2937;border-radius:8px;padding:4px;">
+      <div style="font-size:14px;font-weight:700;margin-bottom:2px;color:#1F2937">{row['district']}</div>
+      <div style="font-size:11px;color:#6B7280;margin-bottom:8px">{row['state']}</div>
+      <div style="font-size:20px;font-weight:700;color:#2563EB;margin-bottom:4px">{row['total_units']:,}</div>
+      <div style="font-size:10px;color:#6B7280;margin-bottom:8px">INDUSTRIAL UNITS</div>
+      <table style="width:100%">{ind_html}</table>
+      {pc_html}
+    </div>'''
 
-    st.markdown("#### 🗺️ Interactive Map")
-    map_data = st_folium(m, width=None, height=560, returned_objects=["last_object_clicked"])
+    folium.CircleMarker(
+        location=[row['lat'], row['lon']],
+        radius=r,
+        color='#1F2937' if is_pc else color,
+        weight=2 if is_pc else 0.8,
+        fill=True,
+        fill_color=color,
+        fill_opacity=0.75,
+        popup=folium.Popup(popup_html, max_width=280),
+        tooltip=f"{row['district']} | {row['total_units']:,} units" + (
+            f" | PC: {row.get('pc_name','')}" if is_pc else ''
+        ),
+    ).add_to(m)
 
-with detail_col:
-    st.markdown("#### 📋 District Rankings")
-    sorted_filtered = filtered.sort_values('total_units', ascending=False)
+st.markdown("#### 🗺️ Interactive Map")
+map_data = st_folium(m, width=None, height=560, returned_objects=["last_object_clicked"])
 
-    if map_data and map_data.get('last_object_clicked'):
-        clicked = map_data['last_object_clicked']
-        clat, clon = clicked.get('lat'), clicked.get('lng')
-        if clat and clon:
-            dists = filtered.apply(lambda r: get_dist_km(clat, clon, r['lat'], r['lon']), axis=1)
-            if len(dists) > 0:
-                closest_idx = dists.idxmin()
-                sel_row = filtered.loc[closest_idx]
+# ─── District Rankings Section (Below Map) ────────────────────────────────────
+st.markdown("<br>", unsafe_allow_html=True)
+st.markdown("#### 📋 District Rankings")
 
-                st.markdown(f"**{sel_row['district']}**")
-                st.caption(sel_row['state'])
-                st.metric("Total Units", f"{sel_row['total_units']:,}")
+ranking_cols = st.columns([2, 1, 1])
+sorted_filtered = filtered.sort_values('total_units', ascending=False)
 
-                if sel_row.get('matched_pc'):
-                    pc_color = get_party_color(sel_row.get('party', ''))
-                    st.markdown(f"""
-                    <div style="background:#EFF6FF;border:1px solid #059669;border-radius:8px;padding:12px;margin:8px 0">
-                        <div class="section-title">🗳 PC Details</div>
-                        <div style="font-weight:700;color:#059669">{sel_row.get('pc_name','')}</div>
-                        <div style="font-size:12px;margin-top:4px;color:#1F2937">🏆 {sel_row.get('winner','')}</div>
-                        <div style="font-size:12px;color:{pc_color};font-weight:600">{sel_row.get('party','')}</div>
-                        <div style="font-size:11px;color:#6B7280">Margin: {sel_row.get('margin',0):,}</div>
-                    </div>
-                    """, unsafe_allow_html=True)
+selected_district_data = None
 
-                if sel_row['industries']:
-                    st.markdown('<div class="section-title">🏭 Industries</div>', unsafe_allow_html=True)
-                    top_inds = sorted(sel_row['industries'].items(), key=lambda x: -x[1])
-                    max_val  = top_inds[0][1] if top_inds else 1
-                    for ind_name, cnt in top_inds[:10]:
-                        pct   = cnt / max_val
-                        color = ind_color_map.get(ind_name, '#2563EB')
-                        short = ind_name[:28] + '…' if len(ind_name) > 28 else ind_name
-                        st.markdown(f"""
-                        <div style="margin-bottom:6px">
-                            <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px">
-                                <span style="color:#374151" title="{ind_name}">{short}</span>
-                                <span style="color:{color};font-family:'JetBrains Mono',monospace;font-weight:600">{cnt}</span>
-                            </div>
-                            <div style="background:#E5E7EB;border-radius:2px;height:5px">
-                                <div style="background:{color};width:{int(pct*100)}%;height:5px;border-radius:2px"></div>
-                            </div>
-                        </div>
-                        """, unsafe_allow_html=True)
+if map_data and map_data.get('last_object_clicked'):
+    clicked = map_data['last_object_clicked']
+    clat, clon = clicked.get('lat'), clicked.get('lng')
+    if clat and clon:
+        dists = filtered.apply(lambda r: get_dist_km(clat, clon, r['lat'], r['lon']), axis=1)
+        if len(dists) > 0:
+            closest_idx = dists.idxmin()
+            selected_district_data = filtered.loc[closest_idx]
 
-                nearby = []
-                for _, r2 in df[df['matched_pc'] == True].iterrows():
-                    d = get_dist_km(sel_row['lat'], sel_row['lon'], r2['lat'], r2['lon'])
-                    if 0 < d <= 150:
-                        nearby.append((d, r2))
-                nearby.sort(key=lambda x: x[0])
-                if nearby:
-                    st.markdown('<div class="section-title" style="margin-top:12px">📍 Nearby PCs (&lt;150km)</div>', unsafe_allow_html=True)
-                    for dist, nr in nearby[:6]:
-                        pc_col = get_party_color(nr.get('party', ''))
-                        st.markdown(f"""
-                        <div style="display:flex;justify-content:space-between;margin-bottom:5px;font-size:11px">
-                            <span><b style="color:#1F2937">{nr.get('pc_name','')}</b><br>
-                            <span style="color:{pc_col};font-weight:600">{nr.get('party','')[:20]}</span></span>
-                            <span style="color:#6B7280;font-family:'JetBrains Mono',monospace">{dist:.0f}km</span>
-                        </div>
-                        """, unsafe_allow_html=True)
-        st.divider()
+# Layout: Rankings on left, detail on right
+rank_col, detail_col = st.columns([2, 1])
 
-    st.markdown("**Top by Units**")
+with rank_col:
+    st.markdown("**Top Districts by Industrial Units**")
     for i, (_, row) in enumerate(sorted_filtered.head(20).iterrows()):
         is_pc      = row.get('matched_pc', False)
         top_ind    = max(row['industries'], key=row['industries'].get) if row['industries'] else '—'
@@ -469,7 +420,66 @@ with detail_col:
         </div>
         """, unsafe_allow_html=True)
 
-# ─── Bottom Tabs ─────────────────────────────────────────────────────────────
+with detail_col:
+    if selected_district_data is not None:
+        sel_row = selected_district_data
+        st.markdown(f"**{sel_row['district']}**")
+        st.caption(sel_row['state'])
+        st.metric("Total Units", f"{sel_row['total_units']:,}")
+
+        if sel_row.get('matched_pc'):
+            pc_color = get_party_color(sel_row.get('party', ''))
+            st.markdown(f"""
+            <div style="background:#EFF6FF;border:1px solid #059669;border-radius:8px;padding:12px;margin:8px 0">
+                <div class="section-title">🗳 PC Details</div>
+                <div style="font-weight:700;color:#059669">{sel_row.get('pc_name','')}</div>
+                <div style="font-size:12px;margin-top:4px;color:#1F2937">🏆 {sel_row.get('winner','')}</div>
+                <div style="font-size:12px;color:{pc_color};font-weight:600">{sel_row.get('party','')}</div>
+                <div style="font-size:11px;color:#6B7280">Margin: {sel_row.get('margin',0):,}</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        if sel_row['industries']:
+            st.markdown('<div class="section-title">🏭 Industries</div>', unsafe_allow_html=True)
+            top_inds = sorted(sel_row['industries'].items(), key=lambda x: -x[1])
+            max_val  = top_inds[0][1] if top_inds else 1
+            for ind_name, cnt in top_inds[:10]:
+                pct   = cnt / max_val
+                color = ind_color_map.get(ind_name, '#2563EB')
+                short = ind_name[:28] + '…' if len(ind_name) > 28 else ind_name
+                st.markdown(f"""
+                <div style="margin-bottom:6px">
+                    <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px">
+                        <span style="color:#374151" title="{ind_name}">{short}</span>
+                        <span style="color:{color};font-family:'JetBrains Mono',monospace;font-weight:600">{cnt}</span>
+                    </div>
+                    <div style="background:#E5E7EB;border-radius:2px;height:5px">
+                        <div style="background:{color};width:{int(pct*100)}%;height:5px;border-radius:2px"></div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+        nearby = []
+        for _, r2 in df[df['matched_pc'] == True].iterrows():
+            d = get_dist_km(sel_row['lat'], sel_row['lon'], r2['lat'], r2['lon'])
+            if 0 < d <= 150:
+                nearby.append((d, r2))
+        nearby.sort(key=lambda x: x[0])
+        if nearby:
+            st.markdown('<div class="section-title" style="margin-top:12px">📍 Nearby PCs (&lt;150km)</div>', unsafe_allow_html=True)
+            for dist, nr in nearby[:6]:
+                pc_col = get_party_color(nr.get('party', ''))
+                st.markdown(f"""
+                <div style="display:flex;justify-content:space-between;margin-bottom:5px;font-size:11px">
+                    <span><b style="color:#1F2937">{nr.get('pc_name','')}</b><br>
+                    <span style="color:{pc_col};font-weight:600">{nr.get('party','')[:20]}</span></span>
+                    <span style="color:#6B7280;font-family:'JetBrains Mono',monospace">{dist:.0f}km</span>
+                </div>
+                """, unsafe_allow_html=True)
+    else:
+        st.info("👉 Click on a district marker on the map to see detailed information here")
+
+# ─── Bottom Tabs ──────────────────────────────────────────────────────────
 st.markdown("<br>", unsafe_allow_html=True)
 tab1, tab2, tab3 = st.tabs(["📊 Data Table", "🗳 PC Analysis", "🏭 Industry Summary"])
 
