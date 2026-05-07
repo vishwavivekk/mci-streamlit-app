@@ -435,7 +435,7 @@ with right_col:
     for _,r2 in top_pcs_tbl.iterrows():
         pc_col=get_party_color(r2.get('party',''))
         u=r2['total_units']
-        sclass,slabel=next(((sc,sl) for thresh,sc,sl in status_map if u>thresh)[:1],('stable','STABLE'))
+        sclass,slabel='stable','STABLE'
         for thresh,sc,sl in status_map:
             if u>thresh: sclass,slabel=sc,sl; break
         abbr=get_party_abbr(r2.get('party',''))
