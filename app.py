@@ -83,40 +83,104 @@ h1,h2,h3,h4,h5,h6,p,span,label{color:#1E293B;}
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 PARTY_COLORS = {
-    'Bharatiya Janata Party':           '#F97316',
-    'Indian National Congress':         '#3B82F6',
-    'Aam Aadmi Party':                  '#06B6D4',
-    'Samajwadi Party':                  '#EF4444',
-    'Bahujan Samaj Party':              '#1E3A8A',
-    'All India Trinamool Congress':     '#22C55E',
-    'Trinamool Congress':               '#22C55E',
-    'Dravida Munnetra Kazhagam':        '#991B1B',
-    'Telugu Desam':                     '#EAB308',
-    'Janata Dal  (United)':             '#8B5CF6',
-    'YSR Congress Party':               '#0369A1',
-    'Biju Janata Dal':                  '#0D9488',
-    'Shiv Sena':                        '#D97706',
-    'Janasena Party':                   '#EC4899',
-    'Rashtriya Lok Dal':                '#84CC16',
-    'Communist Party of India  (Marxist)':'#DC2626',
-    'Nationalist Congress Party':       '#16A34A',
+    # Major national parties — strong, unmistakable hues
+    'Bharatiya Janata Party':                   '#F97316',  # vivid orange
+    'Indian National Congress':                 '#2563EB',  # royal blue
+    'Aam Aadmi Party':                          '#06B6D4',  # cyan
+    'Bahujan Samaj Party':                      '#1E3A8A',  # deep navy
+
+    # Regional — greens
+    'All India Trinamool Congress':             '#16A34A',  # emerald green
+    'Trinamool Congress':                       '#16A34A',
+    'Biju Janata Dal':                          '#4ADE80',  # light green
+    'Rashtriya Lok Dal':                        '#84CC16',  # lime
+
+    # Regional — reds / pinks
+    'Samajwadi Party':                          '#E11D48',  # rose red
+    'Communist Party of India  (Marxist)':      '#DC2626',  # pure red
+    'Communist Party of India':                 '#B91C1C',  # dark red
+    'Dravida Munnetra Kazhagam':                '#9F1239',  # crimson
+
+    # Regional — yellows / golds
+    'Telugu Desam':                             '#CA8A04',  # amber gold
+    'YSR Congress Party':                       '#0369A1',  # ocean blue
+    'Janasena Party':                           '#EC4899',  # hot pink
+
+    # Regional — purples / violets
+    'Janata Dal  (United)':                     '#7C3AED',  # violet
+    'Janata Dal (United)':                      '#7C3AED',
+    'Janata Dal  (Secular)':                    '#A855F7',  # purple
+    'Janata Dal (Secular)':                     '#A855F7',
+    'Nationalist Congress Party':               '#0D9488',  # teal
+
+    # Regional — distinct others
+    'Shiv Sena':                                '#D97706',  # dark amber
+    'Shiv Sena (Uddhav Balasaheb Thackeray)':   '#F59E0B',  # warm yellow
+    'AJSU Party':                               '#0EA5E9',  # sky blue
+    'Apna Dal (Soneylal)':                      '#F472B6',  # pink
+    'Asom Gana Parishad':                       '#10B981',  # jade
+    'Hindustani Awam Morcha':                   '#6366F1',  # indigo
+    'Lok Janshakti Party(Ram Vilas)':           '#14B8A6',  # turquoise
+    'Lok Janshakti Party':                      '#14B8A6',
+    'Rashtriya Janata Dal':                     '#F43F5E',  # flamingo
+    'Sikkim Krantikari Morcha':                 '#8B5CF6',  # medium purple
+    'Telugu Desam Party':                       '#CA8A04',
+    'United Peoples Party Liberal':             '#64748B',  # slate
+    'Voice of the People Party':                '#78716C',  # warm grey
+    'Zoram People\'s Movement':                 '#0C4A6E',  # deep ocean
+    'Independent':                              '#94A3B8',  # light slate
 }
 PARTY_ABBR = {
-    'Bharatiya Janata Party':'BJP','Indian National Congress':'INC',
-    'Aam Aadmi Party':'AAP','Samajwadi Party':'SP','Bahujan Samaj Party':'BSP',
-    'All India Trinamool Congress':'TMC','Trinamool Congress':'TMC',
-    'Dravida Munnetra Kazhagam':'DMK','Telugu Desam':'TDP',
-    'Janata Dal  (United)':'JD(U)','YSR Congress Party':'YSRCP',
-    'Biju Janata Dal':'BJD','Shiv Sena':'SS','Janasena Party':'JSP',
-    'Rashtriya Lok Dal':'RLD','Communist Party of India  (Marxist)':'CPM',
+    'Bharatiya Janata Party':'BJP',
+    'Indian National Congress':'INC',
+    'Aam Aadmi Party':'AAP',
+    'Samajwadi Party':'SP',
+    'Bahujan Samaj Party':'BSP',
+    'All India Trinamool Congress':'TMC',
+    'Trinamool Congress':'TMC',
+    'Dravida Munnetra Kazhagam':'DMK',
+    'Telugu Desam':'TDP',
+    'Telugu Desam Party':'TDP',
+    'Janata Dal  (United)':'JD(U)',
+    'Janata Dal (United)':'JD(U)',
+    'Janata Dal  (Secular)':'JD(S)',
+    'Janata Dal (Secular)':'JD(S)',
+    'YSR Congress Party':'YSRCP',
+    'Biju Janata Dal':'BJD',
+    'Shiv Sena':'SS',
+    'Shiv Sena (Uddhav Balasaheb Thackeray)':'SS(UBT)',
+    'Janasena Party':'JSP',
+    'Rashtriya Lok Dal':'RLD',
+    'Communist Party of India  (Marxist)':'CPM',
+    'Communist Party of India':'CPI',
     'Nationalist Congress Party':'NCP',
+    'AJSU Party':'AJSU',
+    'Apna Dal (Soneylal)':'Apna',
+    'Asom Gana Parishad':'AGP',
+    'Hindustani Awam Morcha':'HAM',
+    'Lok Janshakti Party(Ram Vilas)':'LJP',
+    'Lok Janshakti Party':'LJP',
+    'Rashtriya Janata Dal':'RJD',
+    'Sikkim Krantikari Morcha':'SKM',
+    'United Peoples Party Liberal':'UPPL',
+    'Voice of the People Party':'VOTPP',
+    'Zoram People\'s Movement':'ZPM',
+    'Independent':'IND',
 }
 IND_COLORS = ['#3B82F6','#22C55E','#EF4444','#F59E0B','#8B5CF6','#EC4899',
               '#06B6D4','#F97316','#6366F1','#D97706','#16A34A','#EAB308',
               '#7C3AED','#BE185D','#0D9488','#E11D48','#84CC16','#0284C7',
               '#A21CAF','#C2410C','#0E7490','#15803D','#B91C1C','#6B21A8']
 
-def get_party_color(p): return PARTY_COLORS.get(p,'#6366F1')
+_FALLBACK_COLORS = [
+    '#6366F1','#0891B2','#65A30D','#B45309','#BE185D',
+    '#0E7490','#4338CA','#15803D','#C2410C','#7E22CE',
+    '#0F766E','#1D4ED8','#B91C1C','#92400E','#1E40AF',
+]
+def get_party_color(p):
+    if p in PARTY_COLORS: return PARTY_COLORS[p]
+    # deterministic colour from party name hash so same party = same colour
+    return _FALLBACK_COLORS[abs(hash(p)) % len(_FALLBACK_COLORS)]
 def get_party_abbr(p):  return PARTY_ABBR.get(p, p[:5] if p else '')
 
 def get_dist_km(lat1,lon1,lat2,lon2):
@@ -237,11 +301,11 @@ def stat_card(col, cls, icon, label, value, sub, sub_cls):
 
 stat_card(c1, 'blue',   '🗺️', 'Mapped Principal Constituencies',
           f'{mapped_pc_count}',
-          'PCs matched to industrial districts', 'up')
+          'Principal Constituencies matched to industrial districts', 'up')
 
 stat_card(c2, 'green',  '🏗️', 'Units in Mapped PCs',
           f'{units_in_mapped:,}',
-          'Industrial units across matched PCs', 'up')
+          'Industrial units across Principal Constituencies', 'up')
 
 stat_card(c3, 'orange', '⚔️', 'Competitive Seats',
           f'{competitive_seats}',
