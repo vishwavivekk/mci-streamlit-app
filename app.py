@@ -210,21 +210,53 @@ def load_data():
                      'total_units':sum(it.values()),'industries':it})
     xlsx_path=os.path.join(BASE_DIR,'Lok_Sabha_Elections_Winners_2024.xlsx')
     df_lok=pd.read_excel(xlsx_path); lok={}
+
+    import re as _re
+    def norm(s):
+        """Normalise a name for matching: uppercase, strip, remove suffixes like (SC),(ST), punctuation."""
+        s = str(s).upper().strip()
+        s = _re.sub(r'\s*\(S[CT]\)\s*', '', s)   # remove (SC) / (ST)
+        s = _re.sub(r'[.\-–]', ' ', s)            # dashes/dots → space
+        s = _re.sub(r'\s+', ' ', s).strip()
+        return s
+
     for _,r in df_lok.iterrows():
         try: mg=int(r['Margin Votes'])
         except: mg=0
-        lok[str(r['PC Name']).upper().strip()]={
-            'pc_name':str(r['PC Name']),'state':str(r['State']),
-            'winner':str(r['Winning Candidate']),'party':str(r['Winning Party']),
-            'runner_up':str(r['Runner-up Canddiate']),'runner_party':str(r['Runner-up Party']),'margin':mg}
+        entry={
+            'pc_name':str(r['PC Name']).strip(),
+            'state':str(r['State']),
+            'winner':str(r['Winning Candidate']),
+            'party':str(r['Winning Party']),
+            'runner_up':str(r['Runner-up Canddiate']),
+            'runner_party':str(r['Runner-up Party']),
+            'margin':mg
+        }
+        key = norm(r['PC Name'])
+        lok[key] = entry
+
     for rec in recs:
-        k=rec['district'].upper().strip()
-        if k in lok: rec.update(lok[k]); rec['matched_pc']=True
-        else: rec['matched_pc']=False
+        district_norm = norm(rec['district'])
+        matched = False
+        # Pass 1: exact normalised match
+        if district_norm in lok:
+            rec.update(lok[district_norm]); rec['matched_pc']=True; matched=True
+        # Pass 2: district name is contained within PC name (e.g. "JAIPUR" in "JAIPUR RURAL")
+        if not matched:
+            for pc_key, entry in lok.items():
+                if district_norm == pc_key or district_norm in pc_key.split() or pc_key == district_norm:
+                    rec.update(entry); rec['matched_pc']=True; matched=True; break
+        # Pass 3: PC name starts with district name (catches "BIKANER" matching "BIKANER RURAL" etc.)
+        if not matched:
+            for pc_key, entry in lok.items():
+                if pc_key.startswith(district_norm) or district_norm.startswith(pc_key):
+                    rec.update(entry); rec['matched_pc']=True; matched=True; break
+        if not matched:
+            rec['matched_pc']=False
     df=pd.DataFrame(recs)
     all_ind=sorted({i for r in recs for i in r['industries']})
     icm={i:IND_COLORS[n%len(IND_COLORS)] for n,i in enumerate(all_ind)}
-    return df,list(lok.values()),all_ind,icm
+    return df, list(lok.values()), all_ind, icm
 
 df,lok_list,all_industries,ind_color_map=load_data()
 
@@ -249,6 +281,13 @@ with st.sidebar:
     match_filter=st.radio("District Type",['All','Matched Principal Constituency','Non-Principal Constituency Districts'])
     st.markdown('<div style="height:1px;background:#E8ECF0;margin:12px 0"></div>',unsafe_allow_html=True)
     view_mode=st.radio("Map Colors",['Winning Party','Top Industry','Units Count'])
+    st.markdown("""
+    <div style="margin:14px 16px 0;padding:10px 12px;background:#FFF7ED;border:1px solid #FED7AA;
+    border-radius:8px;font-size:10px;color:#92400E;line-height:1.5">
+    ⚠️ <b>Note:</b> PC election data covers 26 states/UTs. Punjab, Tamil Nadu, Chandigarh &amp; some UTs
+    are not present in the 2024 winners dataset and will show no PC match.
+    </div>
+    """, unsafe_allow_html=True)
 
 # ── Filters ───────────────────────────────────────────────────────────────
 filtered=df.copy()
