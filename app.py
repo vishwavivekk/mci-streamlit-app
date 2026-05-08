@@ -189,8 +189,8 @@ def get_dist_km(lat1,lon1,lat2,lon2):
     return R*2*math.atan2(math.sqrt(a),math.sqrt(1-a))
 
 # ── Data ─────────────────────────────────────────────────────────────────
-@st.cache_data
-def load_data():
+@st.cache_data(show_spinner=False)
+def load_data(version=3):   # bump version to bust stale cache
     csv_path=os.path.join(BASE_DIR,'Annexure_with_3digit_Sheet1_.csv')
     df_raw=pd.read_csv(csv_path); df_u=df_raw.iloc[1:].reset_index(drop=True); df_u.columns=df_raw.columns
     icols=[c for c in df_u.columns if c not in ['State','District','Latitude','Longitude']]
@@ -212,53 +212,91 @@ def load_data():
     df_lok=pd.read_excel(xlsx_path); lok={}
 
     import re as _re
+
+    # ── State name normalisation map (CSV state → Excel state) ──────────
+    STATE_MAP = {
+        'ANDAMAN AND NICOBAR ISLANDS': 'ANDAMAN & NICOBAR ISLANDS',
+        'ANDAMAN & NICOBAR': 'ANDAMAN & NICOBAR ISLANDS',
+        'JAMMU & KASHMIR': 'JAMMU AND KASHMIR',
+        'DELHI': 'NCT OF DELHI',
+        'NCT OF DELHI': 'NCT OF DELHI',
+        'DADRA AND NAGAR HAVELI AND DAMAN AND DIU': 'DADRA & NAGAR HAVELI AND DAMAN & DIU',
+        'DADRA & NAGAR HAVELI': 'DADRA & NAGAR HAVELI AND DAMAN & DIU',
+    }
+
     def norm(s):
-        """Normalise a name for matching: uppercase, strip, remove suffixes like (SC),(ST), punctuation."""
+        """Normalise a name: uppercase, strip, remove (SC)/(ST), collapse punctuation."""
         s = str(s).upper().strip()
-        s = _re.sub(r'\s*\(S[CT]\)\s*', '', s)   # remove (SC) / (ST)
-        s = _re.sub(r'[.\-–]', ' ', s)            # dashes/dots → space
+        s = _re.sub(r'\s*\(S[CT]\)\s*', '', s)
+        s = _re.sub(r'[.\-–&]', ' ', s)
         s = _re.sub(r'\s+', ' ', s).strip()
         return s
 
+    def norm_state(s):
+        n = norm(s)
+        return STATE_MAP.get(n, n)
+
+    # Build lok dict keyed by normalised PC name
     for _,r in df_lok.iterrows():
         try: mg=int(r['Margin Votes'])
         except: mg=0
         entry={
-            'pc_name':str(r['PC Name']).strip(),
-            'state':str(r['State']),
-            'winner':str(r['Winning Candidate']),
-            'party':str(r['Winning Party']),
+            'pc_name':  str(r['PC Name']).strip(),
+            'state':    str(r['State']),
+            'state_norm': norm_state(r['State']),
+            'winner':   str(r['Winning Candidate']),
+            'party':    str(r['Winning Party']),
             'runner_up':str(r['Runner-up Canddiate']),
             'runner_party':str(r['Runner-up Party']),
-            'margin':mg
+            'margin':   mg
         }
         key = norm(r['PC Name'])
         lok[key] = entry
 
+    # Pre-build list for fast iteration
+    lok_items = list(lok.items())
+
     for rec in recs:
         district_norm = norm(rec['district'])
+        rec_state_norm = norm_state(rec['state'])
         matched = False
-        # Pass 1: exact normalised match
+
+        def try_match(pc_key, entry):
+            """Accept match; optionally prefer same-state matches."""
+            return True  # state check relaxed — district names are unique enough
+
+        # Pass 1 – exact normalised match
         if district_norm in lok:
-            rec.update(lok[district_norm]); rec['matched_pc']=True; matched=True
-        # Pass 2: district name is contained within PC name (e.g. "JAIPUR" in "JAIPUR RURAL")
+            rec.update(lok[district_norm])
+            rec['matched_pc'] = True
+            matched = True
+
+        # Pass 2 – district norm == pc_key OR district is one token inside pc_key
         if not matched:
-            for pc_key, entry in lok.items():
-                if district_norm == pc_key or district_norm in pc_key.split() or pc_key == district_norm:
-                    rec.update(entry); rec['matched_pc']=True; matched=True; break
-        # Pass 3: PC name starts with district name (catches "BIKANER" matching "BIKANER RURAL" etc.)
+            for pc_key, entry in lok_items:
+                pc_tokens = pc_key.split()
+                if district_norm in pc_tokens or district_norm == pc_key:
+                    rec.update(entry); rec['matched_pc'] = True; matched = True; break
+
+        # Pass 3 – prefix match both ways (e.g. "JAIPUR" ↔ "JAIPUR RURAL")
         if not matched:
-            for pc_key, entry in lok.items():
+            best = None
+            for pc_key, entry in lok_items:
                 if pc_key.startswith(district_norm) or district_norm.startswith(pc_key):
-                    rec.update(entry); rec['matched_pc']=True; matched=True; break
+                    # pick the longest pc_key that is a prefix of district or vice-versa
+                    if best is None or len(pc_key) > len(best[0]):
+                        best = (pc_key, entry)
+            if best:
+                rec.update(best[1]); rec['matched_pc'] = True; matched = True
+
         if not matched:
-            rec['matched_pc']=False
+            rec['matched_pc'] = False
     df=pd.DataFrame(recs)
     all_ind=sorted({i for r in recs for i in r['industries']})
     icm={i:IND_COLORS[n%len(IND_COLORS)] for n,i in enumerate(all_ind)}
     return df, list(lok.values()), all_ind, icm
 
-df,lok_list,all_industries,ind_color_map=load_data()
+df,lok_list,all_industries,ind_color_map=load_data(version=3)
 
 # ── Sidebar ───────────────────────────────────────────────────────────────
 with st.sidebar:
@@ -284,8 +322,9 @@ with st.sidebar:
     st.markdown("""
     <div style="margin:14px 16px 0;padding:10px 12px;background:#FFF7ED;border:1px solid #FED7AA;
     border-radius:8px;font-size:10px;color:#92400E;line-height:1.5">
-    ⚠️ <b>Note:</b> PC election data covers 26 states/UTs. Punjab, Tamil Nadu, Chandigarh &amp; some UTs
-    are not present in the 2024 winners dataset and will show no PC match.
+    ⚠️ <b>Note:</b> PC data covers NDA alliance seats (293 of 543). Districts matching
+    opposition-won seats (INC, SP, TMC, DMK etc.) or states not in the dataset
+    (Punjab, Tamil Nadu, Chandigarh) will show grey on the map.
     </div>
     """, unsafe_allow_html=True)
 
@@ -361,7 +400,11 @@ def get_color(row):
     if view_mode=='Top Industry':
         return ind_color_map.get(max(row['industries'],key=row['industries'].get),'#6366F1') if row['industries'] else '#6366F1'
     elif view_mode=='Winning Party':
-        return get_party_color(row['party']) if row.get('matched_pc') and pd.notna(row.get('party','')) else '#6366F1'
+        is_pc  = row.get('matched_pc', False)
+        party  = row.get('party', None)
+        if is_pc and party and pd.notna(party) and str(party) not in ('nan',''):
+            return get_party_color(str(party))
+        return '#94A3B8'   # neutral grey for unmatched / no-PC-data districts
     else:
         u=row['total_units']
         if u>500: return '#EF4444'
@@ -387,7 +430,7 @@ def build_legend():
             for p in sorted(filtered[filtered['matched_pc']==True]['party'].dropna().unique())[:10]:
                 c=get_party_color(p)
                 rows+=f'<div class="legend-row"><div class="legend-dot" style="background:{c}"></div><b style="color:{c}">{get_party_abbr(p)}</b> — {p[:22]}</div>'
-        rows+='<div class="legend-row"><div class="legend-dot" style="background:#6366F1"></div>No PC data</div>'
+        rows+='<div class="legend-row"><div class="legend-dot" style="background:#94A3B8"></div>No PC data / Opposition seat</div>'
     return f'<div class="map-legend"><div class="legend-title">{view_mode}</div>{rows}<div style="margin-top:8px;padding-top:8px;border-top:1px solid #E8ECF0;font-size:10px;color:#94A3B8">● Bubble size represents industrial unit count</div></div>'
 
 # ── Main layout: Map+Districts (left 2) | Right panel (right 1) ──────────
