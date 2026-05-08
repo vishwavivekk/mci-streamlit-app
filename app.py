@@ -303,7 +303,7 @@ stat_card(c1, 'blue',   '🗺️', 'Mapped Principal Constituencies',
           f'{mapped_pc_count}',
           'Principal Constituencies matched to industrial districts', 'up')
 
-stat_card(c2, 'green',  '🏗️', 'Units in Mapped PCs',
+stat_card(c2, 'green',  '🏗️', 'Units in Principal Constituencies',
           f'{units_in_mapped:,}',
           'Industrial units across Principal Constituencies', 'up')
 
